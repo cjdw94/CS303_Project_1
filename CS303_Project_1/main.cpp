@@ -4,7 +4,10 @@ using namespace std;
 
 int main() {
 
-	cout << "Hello World!\n" << endl;
+	while (true) {
+		cout << "IT'S TIME TO STOP" << endl;
+	}
+
 
 	return 0;
 
