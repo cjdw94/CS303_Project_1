@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.h">
+    <ClInclude Include="Infix_Evaluator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Syntax_Error.h">
+    <ClInclude Include="Syntax_Error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.cpp">
+    <ClCompile Include="Infix_Evaluator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

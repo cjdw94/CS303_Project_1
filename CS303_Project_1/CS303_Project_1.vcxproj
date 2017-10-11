@@ -18,6 +18,13 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Infix_Evaluator.h" />
+    <ClInclude Include="Syntax_Error.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Infix_Evaluator.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A3F0FC4C-D9CE-4AC2-87C2-D8E117B2F879}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -145,13 +152,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.h" />
-    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Syntax_Error.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
