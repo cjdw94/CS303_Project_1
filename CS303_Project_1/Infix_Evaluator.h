@@ -5,6 +5,17 @@
 #include <string>
 #include "Syntax_Error.h"
 
+
+struct partExpression {
+
+	int lhs, rhs, prec_8_tally;
+	char op1, op2;
+
+	partExpression(char op1 = ' ', char op2 = ' ', int lhs = NULL, int rhs = NULL, int prec_8_tally = NULL) :
+		op1(op1), op2(op2), lhs(lhs), rhs(rhs), prec_8_tally(prec_8_tally) {}
+
+};
+
 class Infix_Evaluator {
 	// Public member functions
 public:
@@ -13,6 +24,9 @@ public:
 	@return The value of the expression
 	@throws Syntax_Error if a syntax error is detected
 	*/
+	void high_prec_eval(const std::string& expression);
+	std::string rebuild_expression();
+	int equate(const std::string& expression);
 	int eval(const std::string& expression);
 
 	// Private member functions
@@ -23,7 +37,11 @@ private:
 	@param op A character representing the operator
 	@throws Syntax_Error if top is attempted on an empty stack
 	*/
-	int eval_op(int lhs, char op, int rhs);
+	int eval_op(char op, int rhs, int lhs);
+	int eval_op(char op, int rhs);
+	bool subexpress_define(partExpression subexpress);
+	bool subexpress_define_reset();
+
 
 	/** Determines whether a character is an operator.
 	@param ch The character to be tested
@@ -42,6 +60,8 @@ private:
 	static const int PRECEDENCE[];
 	std::stack<char> operator_stack;
 	std::stack<int> operand_stack;
+	std::stack<partExpression> high_prec_stack;
+	std::stack<partExpression> high_prec_stack_reversal;
 };
 
 #endif
