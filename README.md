@@ -1,10 +1,12 @@
 # CS303_Project_1
 First CS 303 Project, Fall 2017
 
-Project due on Sunday, October 15th, 2017.
+Project due on Monday, October 16, 2017.  (Development time extended by 24 hours)
+
+/** Project due on Sunday, October 15th, 2017 */
 
 10/14/17 - Many changes with this update
-         - Can evaluate more than just basic expressions, including exponentiation, negation, decrement, increment, negation
+         - Can evaluate more than just basic expressions, including exponentiation, negation, decrement, increment, and 'not' operations
          - Parentheses logic still untested
          - Support for precedence levels 1-4 (logical and comparison operations) still needs to be implemented
 
