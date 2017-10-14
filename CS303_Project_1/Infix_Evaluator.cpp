@@ -451,12 +451,12 @@ std::string Infix_Evaluator::rebuild_expression() {
 			}
 
 			else if (Infix_Evaluator::precedence(current_sub_expression.op2) == 8) {
-				if (current_sub_expression.prec_8_tally == 1) {
+				if (current_sub_expression.prec_8_tally == 0) {
 					lhs = current_sub_expression.rhs;
 					op = current_sub_expression.op2;
 					result = Infix_Evaluator::eval_op(op, lhs);
 				}
-				else if (current_sub_expression.prec_8_tally > 1) {
+				else if (current_sub_expression.prec_8_tally > 0) {
 					int tally_num = current_sub_expression.prec_8_tally;
 					for (int i = 0; i < tally_num; i++) {
 						lhs = current_sub_expression.rhs;
@@ -465,9 +465,9 @@ std::string Infix_Evaluator::rebuild_expression() {
 					}
 				}
 				rhs = result;
-				lhs = current_sub_expression.rhs;
+				lhs = current_sub_expression.lhs;
 				op = current_sub_expression.op1;
-				result = Infix_Evaluator::eval_op(op, lhs);
+				result = Infix_Evaluator::eval_op(op, rhs, lhs);
 				rebuilt_expression << result;
 				new_string += rebuilt_expression.str();
 				new_string += " ";
@@ -539,8 +539,8 @@ int Infix_Evaluator::equate(const std::string& expression) {
 				// Store operator in a temp variable
 				char op = next_char;
 
-				// If operator stack is not empty, and the operator has a equal to or lower precedence than 6, push operator onto the operator stack
-				if ((!operator_stack.empty()) && (precedence(next_char) <= 6))
+				// If operator stack is not empty, and the operator has a equal to or lower precedence than 5, push operator onto the operator stack
+				if ((!operator_stack.empty()) && (precedence(next_char) <= 5))
 					operator_stack.push(next_char);
 
 				// If operator has a greater precedence than 5 (meaning * / or %), let's evaluate the sub-expression
@@ -710,6 +710,7 @@ stack and applies the operator.
 */
 int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
 	int result = 0;
+
 	switch (op) {
 	case '+': result = lhs + rhs;
 		break;
@@ -722,20 +723,18 @@ int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
 	case '%': result = lhs % rhs;
 		break;
 	case '^':
-		for (int i = 2; i <= rhs; i++) {
-			if (rhs == 0) {
-				result = 1;
-				break;
-			}
-			else if (rhs == 1) {
-				result = lhs;
-				break;
-			}
-			else {
-				lhs *= lhs;
-			}
-			result = lhs;
+		if (rhs == 0) {
+			result = 1;
+			break;
 		}
+		else if (rhs == 1) {
+			result = lhs;
+			break;
+		}
+		for (int i = 2; i <= rhs; i++) {
+			lhs *= lhs;
+		}
+		result = lhs;
 		break;
 	}
 	return result;
@@ -773,17 +772,28 @@ int Infix_Evaluator::eval(const std::string& expression) {
 // Main function for testing purposes with console output display only
 int main() {
 
+	// Debug testing strings
+
+	//Needs debugging
+	string expr = "2+2^2*3";
+
+	//Works
 	//string expr = "10 - 2 * 5 + 6 * 2 / 2";
 
+	//Works
 	//string expr = "10 + 2 * 3";
 
-	//string expr = "2 + 2 ^ 2 * 3";
-
+	//Works
 	//string expr = "++2";
 
+	//Works
 	//string expr = "2^!8";
 
-	string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
+	//Depending on interpretation of acceptable 'division', this works per C++ language -> 2 + 0 * 8 = 2
+	//string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
+
+	//Works
+	//string expr = "1+2*3";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
