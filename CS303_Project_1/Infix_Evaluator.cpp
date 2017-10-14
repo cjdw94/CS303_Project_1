@@ -11,7 +11,7 @@ using std::isdigit;
 
 const string Infix_Evaluator::OPERATORS = "+-*/%^#~$!()[]{}";
 const int Infix_Evaluator::PRECEDENCE[] = { 5, 5, 6, 6, 6, 7, 8, 8, 8, 8, -1, -1, -1, -1, -1, -1 };
-bool LHS_RHS_OP1_OP2, LHS_RHS_OP1, LHS_RHS, LHS_OP1_OP2, LHS_OP1, LHS_OP2, LHS, RHS_OP1_OP2, 
+bool LHS_RHS_OP1_OP2, LHS_RHS_OP1, LHS_RHS_OP2, LHS_RHS, LHS_OP1_OP2, LHS_OP1, LHS_OP2, LHS, RHS_OP1_OP2, 
 			RHS_OP1, RHS_OP2, RHS, OP1_OP2, OP1, OP2, NO_LHS_RHS_OP1_OP2;
 
 /** Systematically parses the full expression and handles the highest precedence (8) subexpressions first
@@ -108,12 +108,14 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 			// Any precedence less than 6 gets automatically pushed to the high_prec_stack by itself
 				// Subexpressions should not need to be built with precedence operators less than 6
 			if (Infix_Evaluator::precedence(next_char) < 6) {
+				// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
 				subexpress_define(new_part);
 				// If previous subexpression was a number, and only a number, push it first
 				if (LHS) {
 					high_prec_stack.push(new_part);
 					partExpression newer_part;
 					new_part = newer_part;
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 					subexpress_define_reset();
 				}
 				// If previous subexpression was a full subexpression, push it first
@@ -121,6 +123,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 					high_prec_stack.push(new_part);
 					partExpression newer_part;
 					new_part = newer_part;
+					// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 					subexpress_define_reset();
 				}
 				new_part_alone.op1 = next_char;
@@ -133,6 +136,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 			// Add in operator member variable op1 of new_part
 			else if ((new_part.op1 == ' ') && (new_part.op2 == ' ')) {
 				// If OP1, no LHS, no OP2 => push to stack by itself
+				// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
 				subexpress_define(new_part);
 				if (OP1) {
 					new_part_alone.op1 = next_char;
@@ -140,20 +144,22 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 					partExpression newer_part_alone;
 					new_part_alone = newer_part_alone;
 					last_op_prec = Infix_Evaluator::precedence(next_char);
+					// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 					subexpress_define_reset();
 				}
 				else {
 					new_part.op1 = next_char;
 					last_op_prec = Infix_Evaluator::precedence(new_part.op1);
-				}
-				
+				}	
 			}
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
 			subexpress_define(new_part);
 			// If we are holding on to an operator == prec 6 and there is a full subexpression (with two operators) already, push the subexpression first, then push the operator we are holding on to (by itself)
 			if ((LHS_RHS_OP1_OP2) && Infix_Evaluator::precedence(next_char) == 6) {
 				high_prec_stack.push(new_part);
 				partExpression newer_part;
 				new_part = newer_part;
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
 
 				new_part_alone.op1 = next_char;
@@ -165,21 +171,47 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 
 			// If we have only two things in the subexpression (high prec prefix operator like -, --, ++, or !) and a LHS number, we need to push it to the stack now
 
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
+			subexpress_define(new_part);
 			if ((LHS_OP1) && Infix_Evaluator::precedence(new_part.op1) == 8) {
 				high_prec_stack.push(new_part);
 				partExpression newer_part;
 				new_part = newer_part;
+				
+				// Still holding on to current 'next_char' that was read in at the top of the loop - push it to the stack
+				// by itself now
+
+				// If next_char is a number
+				if (isdigit(next_char)) {
+					new_part_alone.lhs = next_char;
+					high_prec_stack.push(new_part_alone);
+				}
+
+				// If next_char is an operator
+				else {
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					last_op_prec = Infix_Evaluator::precedence(new_part_alone.op1);
+				}
+
+				partExpression newer_part_alone;
+				new_part_alone = newer_part_alone;
+
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
+
 			}
 
-// ******   START TRYING TO APPROP. GROUP NEW_PART SUBEXPRESSIONS IF NEEDED BEFORE PUSHING TO STACK ***
+// ***   START TRYING TO APPROPRIATELY GROUP NEW_PART SUBEXPRESSIONS IF NEEDED BEFORE PUSHING TO STACK ***
 
 
 			// One operator currently within new_part (sub-expression), and new operator is higher precedence than previous operator
 			// LHS and op1 currently within existing sub-expression
 			// Add operator to sub-expression as op2
 			// Do not push to high_prec_stack (yet), because multiple prec 8 operators chained together need to be accounted for
-			// Ex.) 2^!8 => read LHS, read OP1, read(ing) OP2, no RHS yet
+			// Ex.) 2^!8 => we already read LHS, already read OP1, now read(ing) OP2, no RHS yet
+
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
 			subexpress_define(new_part);
 			if ((LHS_OP1) && (precedence(next_char) == 8)) {
 				// LHS and op1 currently within existing sub-expression
@@ -188,12 +220,16 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 
 				// Set most recent op precedence
 				last_op_prec = Infix_Evaluator::precedence(new_part.op2);
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
 			}
 			// One operator currently within new_part (sub-expression), and new operator is equal to or lower precedence than previous operator
 			// LHS and RHS currently within existing sub-expression
 			// Add operator to sub-expression as op2
 			// Do not push to high_prec_stack (yet), because multiple prec 8 operators chained together need to be accounted for
+
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
+			subexpress_define(new_part);
 			if ((LHS_RHS_OP1) && (last_op_prec <= Infix_Evaluator::precedence(next_char))) {
 				// If prec 8 operators being dealt with, tally them as needed
 				if (Infix_Evaluator::precedence(next_char) == 8) {
@@ -232,6 +268,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				else {
 					throw Syntax_Error("I have no idea.");
 				}
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
 			}
 
@@ -241,6 +278,8 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 			// Push just the new operator to high_prec_stack as new_part_alone (op1, no other data members)
 			// Reset sub-expression variables to defaults with empty constructor
 
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
+			subexpress_define(new_part);
 			if (LHS_RHS_OP1 && (last_op_prec > Infix_Evaluator::precedence(next_char))) {
 				// LHS and RHS currently within existing sub-expression
 				if (new_part.rhs != NULL) {
@@ -258,6 +297,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 					// Reset new_part_alone to defaults
 					partExpression newer_part_alone;
 					new_part_alone = newer_part_alone;
+					// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 					subexpress_define_reset();
 				}
 				// LHS present in sub-expression, but no RHS in sub-expression ** THROW ERROR ** 
@@ -268,16 +308,22 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				else {
 					throw Syntax_Error("I have no idea.");
 				}
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
+				subexpress_define_reset();
 			}
 
 			// If the function reaches this point and all member variables of new_part are NULL, that means we are at a place where there is a sub-expression of *JUST* a number - push it to the high_prec_stack wrapped in new_part
+
 			else if ((isdigit(next_char)) && (NO_LHS_RHS_OP1_OP2)) {
 				new_part.lhs = next_char;
 				high_prec_stack.push(new_part);
 				partExpression newer_part;
 				new_part = newer_part;
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
 			}
+			// Check 'truth' function subexpress_define() against new_part (sets alias bool variable(s) to true if true)
+			subexpress_define(new_part);
 		}
 	}
 	if (!(tokens >> next_char)) {
@@ -287,6 +333,9 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 	}
 	else
 		tokens.putback(next_char);
+
+	// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
+	subexpress_define_reset();
 }
 
 /** Evaluates an infix expression/subexpression from the high_prec_stack and 
@@ -312,26 +361,29 @@ std::string Infix_Evaluator::rebuild_expression() {
 		current_sub_expression = high_prec_stack.top();
 		high_prec_stack.pop();
 
-		if (((current_sub_expression.lhs != NULL) || (current_sub_expression.op1 != ' ')) &&
-			(current_sub_expression.op2 == ' ') && (current_sub_expression.rhs == NULL)) {
-			if (current_sub_expression.op1 == ' ') {
+		// Either only a number (LHS) or only an operator (op1) exist in the struct at the top of the high_prec_eval stack
+		subexpress_define(current_sub_expression);
+		if (LHS || OP1) {
+			if (LHS) {
 				rebuilt_expression << current_sub_expression.lhs;
 				new_string += rebuilt_expression.str();
 				new_string += " ";
 				rebuilt_expression.str("");
 				rebuilt_expression.clear();
 			}
-			else if (current_sub_expression.lhs == NULL) {
+			else if (OP1) {
 				rebuilt_expression << current_sub_expression.op1;
 				new_string += rebuilt_expression.str();
 				new_string += " ";
 				rebuilt_expression.str("");
 				rebuilt_expression.clear();
 			}
+			subexpress_define_reset();
 		}
 
-		if (((current_sub_expression.lhs != NULL) && (current_sub_expression.op1 != ' ')) &&
-			(current_sub_expression.op2 == ' ') && (current_sub_expression.rhs == NULL)) {
+		// Just a LHS number and 1 operator exist within the subexpression on top of the high_prec_eval stack
+		subexpress_define(current_sub_expression);
+		if (LHS_OP1) {
 			int result;
 			int lhs = current_sub_expression.lhs;
 			char op = current_sub_expression.op1;
@@ -342,9 +394,10 @@ std::string Infix_Evaluator::rebuild_expression() {
 			rebuilt_expression.str("");
 			rebuilt_expression.clear();
 			}
+		subexpress_define_reset();
 
-		if ((current_sub_expression.lhs != NULL) && (current_sub_expression.op1 != ' ') &&
-			(current_sub_expression.op2 == ' ') && (current_sub_expression.rhs != NULL)) {
+		subexpress_define(current_sub_expression);
+		if (LHS_RHS_OP1) {
 			int result;
 			int lhs = current_sub_expression.lhs;
 			int rhs = current_sub_expression.rhs;
@@ -356,9 +409,10 @@ std::string Infix_Evaluator::rebuild_expression() {
 			rebuilt_expression.str("");
 			rebuilt_expression.clear();
 		}
+		subexpress_define_reset();
 
-		if ((current_sub_expression.lhs != NULL) && (current_sub_expression.op1 != ' ') &&
-			(current_sub_expression.op2 != ' ') && (current_sub_expression.rhs == NULL)) {
+		subexpress_define(current_sub_expression);
+		if (LHS_OP1_OP2) {
 			int result, lhs;
 			char op;
 			if (current_sub_expression.prec_8_tally == 1) {
@@ -385,9 +439,50 @@ std::string Infix_Evaluator::rebuild_expression() {
 			rebuilt_expression.clear();
 		}
 
-		if ((current_sub_expression.lhs == NULL) && (current_sub_expression.op1 == ' ') &&
-			(current_sub_expression.op2 == ' ') && (current_sub_expression.rhs == NULL) && (new_string != ""))
+		subexpress_define_reset();
+
+		subexpress_define(current_sub_expression);
+		if (LHS_RHS_OP1_OP2) {
+			int result, lhs, rhs;
+			char op;
+
+			if (Infix_Evaluator::precedence(current_sub_expression.op1) == 8) {
+				throw Syntax_Error("Improperly ordered sub expression.");
+			}
+
+			else if (Infix_Evaluator::precedence(current_sub_expression.op2) == 8) {
+				if (current_sub_expression.prec_8_tally == 1) {
+					lhs = current_sub_expression.rhs;
+					op = current_sub_expression.op2;
+					result = Infix_Evaluator::eval_op(op, lhs);
+				}
+				else if (current_sub_expression.prec_8_tally > 1) {
+					int tally_num = current_sub_expression.prec_8_tally;
+					for (int i = 0; i < tally_num; i++) {
+						lhs = current_sub_expression.rhs;
+						op = current_sub_expression.op2;
+						result = Infix_Evaluator::eval_op(op, lhs);
+					}
+				}
+				rhs = result;
+				lhs = current_sub_expression.rhs;
+				op = current_sub_expression.op1;
+				result = Infix_Evaluator::eval_op(op, lhs);
+				rebuilt_expression << result;
+				new_string += rebuilt_expression.str();
+				new_string += " ";
+				rebuilt_expression.str("");
+				rebuilt_expression.clear();
+			}
+		}
+
+		subexpress_define_reset();
+
+		subexpress_define(current_sub_expression);
+		if ((NO_LHS_RHS_OP1_OP2) && (new_string != ""))
 			return new_string;
+		
+		subexpress_define_reset();
 	}
 
 	return new_string;
@@ -550,11 +645,13 @@ int Infix_Evaluator::equate(const std::string& expression) {
 	}
 }
 
-// Wrapper function to help readability of code
+// Wrapper function to help readability of code - checks/set true flag for bool alias variables
 bool Infix_Evaluator::subexpress_define(partExpression subexpress) {
 	if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (LHS_RHS_OP1_OP2 = true);
 	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
+		return (LHS_RHS_OP1 = true);
+	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
 		return (LHS_RHS_OP1 = true);
 	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
 		return (LHS_RHS = true);
@@ -585,9 +682,11 @@ bool Infix_Evaluator::subexpress_define(partExpression subexpress) {
 	return false;
 }
 
+// When called, resets all true flags assigned by subexpress_define back to false
 bool Infix_Evaluator::subexpress_define_reset() {
 	return(LHS_RHS_OP1_OP2 = false,
 		LHS_RHS_OP1 = false,
+		LHS_RHS_OP2 = false,
 		LHS_RHS = false,
 		LHS_OP1_OP2 = false,
 		LHS_OP1 = false,
@@ -667,7 +766,6 @@ int Infix_Evaluator::eval(const std::string& expression) {
 	Infix_Evaluator::high_prec_eval(expression);
 	std::string new_expression = Infix_Evaluator::rebuild_expression();
 
-
 	return (Infix_Evaluator::equate(new_expression));
 }
 
@@ -685,7 +783,7 @@ int main() {
 
 	//string expr = "2^!8";
 
-	string expr = "1 * 2 + 2 ^ !8 / ++2 * 8";
+	string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
