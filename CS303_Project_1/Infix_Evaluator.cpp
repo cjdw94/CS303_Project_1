@@ -282,34 +282,34 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 			subexpress_define(new_part);
 			if (LHS_RHS_OP1 && (last_op_prec > Infix_Evaluator::precedence(next_char))) {
 				// LHS and RHS currently within existing sub-expression
-				if (new_part.rhs != NULL) {
-					// Push current complete sub-expression
-					high_prec_stack.push(new_part);
-					// Reset new_part to defaults
-					partExpression newer_part;
-					new_part = newer_part;
-					// Wrap solo operator in 'new_part_alone' sub-expression
-					new_part_alone.op1 = next_char;
-					// Set most recent op precedence
-					last_op_prec = Infix_Evaluator::precedence(new_part_alone.op1);
-					// Push just the new operator wrapped in sub-expression struct - will be used to connect other sub-expressions later
-					high_prec_stack.push(new_part_alone);
-					// Reset new_part_alone to defaults
-					partExpression newer_part_alone;
-					new_part_alone = newer_part_alone;
-					// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
-					subexpress_define_reset();
-				}
-				// LHS present in sub-expression, but no RHS in sub-expression ** THROW ERROR ** 
-				// Only time there should be one operator and one number (and valid) is with prec 8 operator(s) 
-					// - (so this is only possible if prec 8 is lower than anything, and it's not lower than ANYTHING)
-				if (LHS_OP1) 
-					throw Syntax_Error("Improperly ordered sub-expression.");
-				else {
-					throw Syntax_Error("I have no idea.");
-				}
+				
+				// Push current complete sub-expression
+				high_prec_stack.push(new_part);
+				// Reset new_part to defaults
+				partExpression newer_part;
+				new_part = newer_part;
+				// Wrap solo operator in 'new_part_alone' sub-expression
+				new_part_alone.op1 = next_char;
+				// Set most recent op precedence
+				last_op_prec = Infix_Evaluator::precedence(new_part_alone.op1);
+				// Push just the new operator wrapped in sub-expression struct - will be used to connect other sub-expressions later
+				high_prec_stack.push(new_part_alone);
+				// Reset new_part_alone to defaults
+				partExpression newer_part_alone;
+				new_part_alone = newer_part_alone;
+
 				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 				subexpress_define_reset();
+
+				// BAD LOGIC BELOW ???  (Crashes 2+2^2*3 on final push of int 3 to high_prec_eval stack)
+				/** LHS present in sub-expression, but no RHS in sub-expression ** THROW ERROR **
+				// Only time there should be one operator and one number (and valid) is with prec 8 operator(s)
+				// - (so this is only possible if prec 8 is lower than anything, and it's not lower than ANYTHING)
+				if (LHS_OP1)
+				throw Syntax_Error("Improperly ordered sub-expression.");
+				else {
+				throw Syntax_Error("I have no idea.");
+				} */
 			}
 
 			// If the function reaches this point and all member variables of new_part are NULL, that means we are at a place where there is a sub-expression of *JUST* a number - push it to the high_prec_stack wrapped in new_part
@@ -744,7 +744,7 @@ int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
 int Infix_Evaluator::eval_op(char op, int rhs) {
 	int result = 0;
 	switch (op) {
-		// Not operator
+		// 'Not' operator
 	case '!': result = 0 * rhs;
 		break;
 		// '$' is a stand-in char for ++/increment operator
@@ -772,27 +772,27 @@ int Infix_Evaluator::eval(const std::string& expression) {
 // Main function for testing purposes with console output display only
 int main() {
 
-	// Debug testing strings
+	// Debug testing strings:
 
-	//Needs debugging
-	string expr = "2+2^2*3";
+	//Works = 14
+	//string expr = "2+2^2*3";
 
-	//Works
+	//Works = 6
 	//string expr = "10 - 2 * 5 + 6 * 2 / 2";
 
-	//Works
+	//Works = 16
 	//string expr = "10 + 2 * 3";
 
-	//Works
+	//Works = 3
 	//string expr = "++2";
 
-	//Works
+	//Works = 1
 	//string expr = "2^!8";
 
 	//Depending on interpretation of acceptable 'division', this works per C++ language -> 2 + 0 * 8 = 2
 	//string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
 
-	//Works
+	//Works = 7
 	//string expr = "1+2*3";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
