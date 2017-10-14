@@ -3,6 +3,11 @@ First CS 303 Project, Fall 2017
 
 Project due on Sunday, October 15th, 2017.
 
+10/14/17 - Many changes with this update
+         - Can evaluate more than just basic expressions, including exponentiation, negation, decrement, increment, negation
+         - Parentheses logic still untested
+         - Support for precedence levels 1-4 (logical and comparison operations) still needs to be implemented
+
 10/09/17 - First working prototype of Project 1A - an infix evaluator/parser
          - Can evaluate basic expressions
          - Foundation for parentheses logic added, but untested
