@@ -5,6 +5,10 @@ Project due on Monday, October 16, 2017.  (Development time extended by 24 hours
 
 /** Project due on Sunday, October 15th, 2017 */
 
+10/14/17 - Support added for precedence levels 1-4.  Chaining expressions with logical and comparison operations needs further         
+           fixing/tresting.
+         - Parentheses logic still needs to be worked on
+
 10/14/17 - Many changes with this update
          - Can evaluate more than just basic expressions, including exponentiation, negation, decrement, increment, and 'not' operations
          - Parentheses logic still untested
