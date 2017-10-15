@@ -5,13 +5,28 @@
 #include <string>
 #include "Syntax_Error.h"
 
+/** NOTE:
+
+	Alias key for double char operators
+	-----------------------------------
+	"||"			=			'|'
+	"&&"			=			'&'
+	"=="			=			'='
+	"!="			=			'?'
+	">="			=			'@'
+	"<="			=			'`'
+	Negative sign	=			'#'
+	"--"			=			'~'
+	"++"			=			'$'
+
+*/
 
 struct partExpression {
 
 	int lhs, rhs, prec_8_tally;
 	char op1, op2;
 
-	partExpression(char op1 = ' ', char op2 = ' ', int lhs = NULL, int rhs = NULL, int prec_8_tally = NULL) :
+	partExpression(char op1 = ' ', char op2 = ' ', int lhs = -9999999, int rhs = -9999999, int prec_8_tally = NULL) :
 		op1(op1), op2(op2), lhs(lhs), rhs(rhs), prec_8_tally(prec_8_tally) {}
 
 };
