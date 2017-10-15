@@ -9,8 +9,9 @@ using std::string;
 using std::istringstream;
 using std::isdigit;
 
-const string Infix_Evaluator::OPERATORS = "+-*/%^#~$!()[]{}";
-const int Infix_Evaluator::PRECEDENCE[] = { 5, 5, 6, 6, 6, 7, 8, 8, 8, 8, -1, -1, -1, -1, -1, -1 };
+int def_zero = -9999999;
+const string Infix_Evaluator::OPERATORS = "|&=?>@<`+-*/%^#~$!()[]{}";
+const int Infix_Evaluator::PRECEDENCE[] = { 1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 6, 7, 8, 8, 8, 8, -1, -1, -1, -1, -1, -1 };
 bool LHS_RHS_OP1_OP2, LHS_RHS_OP1, LHS_RHS_OP2, LHS_RHS, LHS_OP1_OP2, LHS_OP1, LHS_OP2, LHS, RHS_OP1_OP2, 
 			RHS_OP1, RHS_OP2, RHS, OP1_OP2, OP1, OP2, NO_LHS_RHS_OP1_OP2;
 
@@ -27,7 +28,9 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 
 	// Process each token
 	istringstream tokens(expression);
-	char next_char;
+	char next_char, temp_char = 'a';
+	int temp_int = 0;
+	bool solo_negation = false;
 
 	// Ex. 1) For the number 10, the token stream reads in the char '1' -> continued in if-statement
 
@@ -41,6 +44,9 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 
 	while (tokens >> next_char) {
 
+		solo_negation = false;
+		subexpress_define(new_part);
+
 		// Ex. 1 cont) char '1' is definitely a number, so isdigit() returns true
 		// Adds numbers to LHS and RHS of new_part
 		if (isdigit(next_char)) {
@@ -51,10 +57,10 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 			// Now the token stream reads in the int 10, instead of the char '1'
 			tokens >> value;
 			// The number 10 added to the LHS of subexpression new_part
-			if ((new_part.lhs == NULL) && (new_part.rhs == NULL))
+			if ((new_part.lhs == def_zero) && (new_part.rhs == def_zero))
 				new_part.lhs = value;
 			// The number 10 added to the RHS of subexpression new_part
-			else if ((new_part.lhs != NULL) && (new_part.rhs == NULL))
+			else if ((new_part.lhs != def_zero) && (new_part.rhs == def_zero))
 				new_part.rhs = value;
 			else {
 				throw Syntax_Error("Improper placement of digits in given infix expression");
@@ -62,6 +68,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 		}
 		// Ex. 2 cont) char '*' is definitely an operator, so is_operator() returns true
 		// Determines if next_char is an operator
+
 		else if (is_operator(next_char)) {
 			// If next_char is an opening paren, push onto high_prec_stack
 			// ...Unless it's a closing paren, in which case, throw Syntax_Error
@@ -74,37 +81,198 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				partExpression newer_part_alone;
 				new_part_alone = newer_part_alone;
 			}
-			// Compensate for '-' negative sign operator or "--" decrement operator
+			// Compensate for "||" logical OR operator (precedence 1)
+			if (next_char == '|') {
+				// Temporarily look ahead to see what the following char will be
+				// If anything but the second half of OR operator, throw error (one should not exist without a second)
+				tokens >> next_char;
+				// See if a digit comes after complete OR operator
+				if (tokens >> temp_char) {};
+				// No alias necessary, because no other operator should use this char
+				if (LHS && (next_char == '|') && (isdigit(temp_char))) {
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part);
+					partExpression newer_part, newer_part_alone;
+					new_part = newer_part;
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					new_part_alone = newer_part_alone;
+					tokens.unget();
+					continue;
+				}
+				else {
+					throw Syntax_Error("Incomplete '||' logic operator.");
+				}
+			}
+			// Compensate for "&&" logical AND operator (precedence 2)
+			if (next_char == '&') {
+				// Temporarily look ahead to see what the following char will be
+				// If anything but the second half of OR operator, throw error (one should not exist without a second)
+				tokens >> next_char;
+				// See if a digit comes after complete AND operator
+				if (tokens >> temp_char) {};
+				// No alias necessary, because no other operator should use this char
+				if (LHS && (next_char == '&') && (isdigit(temp_char))) {
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part);
+					partExpression newer_part, newer_part_alone;
+					new_part = newer_part;
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					new_part_alone = newer_part_alone;
+					tokens.unget();
+					continue;
+				}
+				else {
+					throw Syntax_Error("Incomplete '&&' logic operator.");
+				}
+			}
+			// Compensate for "is_equal" ("==") equality comparison (precedence 3)
+			if (next_char == '=') {
+				// Temporarily look ahead to see what the following char will be
+				// If anything but the second half of "is_equal" operator, throw error (one should not exist without a second)
+					// Note that other operators that use the '=' character use it on the *second* half of the complete operator
+				tokens >> next_char;
+				// See if a digit comes after complete "is_equal" operator
+				if (tokens >> temp_char) {};
+				// No alias necessary, because no other operator should use this char as the first half of a complete operator
+				if (LHS && (next_char == '=') && (isdigit(temp_char))) {
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part);
+					partExpression newer_part, newer_part_alone;
+					new_part = newer_part;
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					new_part_alone = newer_part_alone;
+					tokens.unget();
+					continue;
+				}
+				else {
+					throw Syntax_Error("Incomplete '==' equality operator.");
+				}
+			}
+			// Compensate for "is_not_equal" ("!=") equality comparison (precedence 3)
+			// Alias for "!=" will be '?'
+			if (next_char == '!') {
+				// Temporarily look ahead to see what the following char will be
+				// If anything but the second half of "is_not_equal" operator, move on (could be '!' NOT operator alone)
+				tokens >> next_char;
+				if (next_char == '=') {
+					// See if a digit comes after complete "is_equal" operator
+					if (tokens >> temp_char) {}
+					// No alias necessary, because no other operator should use this char as the first half of a complete operator
+					if (LHS && (next_char == '=') && (isdigit(temp_char))) {
+						new_part_alone.op1 = '?';
+						high_prec_stack.push(new_part);
+						partExpression newer_part, newer_part_alone;
+						new_part = newer_part;
+						new_part_alone.op1 = next_char;
+						high_prec_stack.push(new_part_alone);
+						new_part_alone = newer_part_alone;
+						tokens.unget();
+						continue;
+					}
+				}
+				else {
+					// If just plain '!' NOT operator, put the tokens that we peeked at back into the stream
+					if (temp_char != 'a')
+						tokens.unget();
+					tokens.unget();
+					next_char = '!';
+				}
+			}
+			// Compensate for ">=" and "<=" comparison operators (precedence 4)
+				// Alias for ">=" will be '@'
+				// Alias for "<=" will be '`'
+			if ((next_char == '>') || (next_char == '<')) {
+
+				// Temporarily look ahead to see what the following char will be
+				// If anything but the second half of comparison l/g_or_equal operator, move on 
+					// (could be '>' or '<' comparison operator alone)
+
+				// Temp char variable to hold first half of potential l/g_or_equal operator
+				char temp_comparison = next_char;
+				tokens >> next_char;
+				// See if a digit comes after complete "is_equal" operator
+				if (tokens >> temp_char) {}
+				// Alias: ">=" will be '@', "<=' will be '`'
+				if (LHS && (temp_comparison == '>') && (next_char == '=') && (isdigit(temp_char))) {
+					next_char = '@';
+					high_prec_stack.push(new_part);
+					partExpression newer_part, newer_part_alone;
+					new_part = newer_part;
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					new_part_alone = newer_part_alone;
+					tokens.unget();
+					temp_comparison = ' ';
+					continue;
+				}
+				if (LHS && (temp_comparison == '<') && (next_char == '=') && (isdigit(temp_char))) {
+					next_char = '`';
+					high_prec_stack.push(new_part);
+					partExpression newer_part, newer_part_alone;
+					new_part = newer_part;
+					new_part_alone.op1 = next_char;
+					high_prec_stack.push(new_part_alone);
+					new_part_alone = newer_part_alone;
+					tokens.unget();
+					temp_comparison = ' ';
+					continue;
+				}
+				else {
+					// If just plain '<' or '>' operator, put the tokens that we peeked at back into the stream
+					tokens.unget();
+					tokens.unget();
+					temp_comparison = ' ';
+				}
+			}
+			subexpress_define(new_part);
+			// Compensate for '-' negative sign operator or "--" decrement operator (precedence 8)
 			if (next_char == '-') {
 				// Temporarily look ahead to see what the following char will be
 				// If anything but decrement operator, put the following char back where we found it
 				tokens >> next_char;
 				// Alias for negative sign will be '#' char
-				if ((new_part.lhs == NULL) && (isdigit(next_char))) {
-					tokens.putback(next_char);
-					next_char = '#';
+					// For negative sign, we don't want to put the character back - we want to grab it
+					// and the digit that accompanies it, and immediately stick them into the
+					// high_prec_stack together - then continue to the top of the while loop
+				if ((new_part.lhs == def_zero) && (isdigit(next_char))) {
+					tokens.unget();
+					tokens >> temp_int;
+					new_part.lhs = temp_int;
+					new_part.op1 = '#';
+					temp_int = 0;
+					solo_negation = true;
+					high_prec_stack.push(new_part);
+					partExpression newer_part;
+					new_part = newer_part;
+					last_op_prec = 8;
+					continue;
 				}
 				// Standard subtraction operator
-				else if ((new_part.lhs != NULL) && (isdigit(next_char))) {
+				else if ((new_part.lhs != def_zero) && (isdigit(next_char))) {
 					tokens.putback(next_char);
 					next_char = '-';
 				}
 				// Alias for decrement operator will be '~' char
-				else if ((next_char == '-') && (new_part.lhs == NULL)) {
+				else if ((next_char == '-') && (new_part.lhs == def_zero)) {
 					next_char = '~';
 				}
 				else
 					tokens.putback(next_char);
 			}
-			// Compensate for "++" increment operator
+			subexpress_define_reset();
+			// Compensate for "++" increment operator (precedence 8)
 			// Alias for increment operator will be '$' char
-			if ((next_char == '+') && (new_part.lhs == NULL)) {
+			if ((next_char == '+') && (new_part.lhs == def_zero)) {
 				tokens >> next_char;
 				if (next_char == '+')
 					next_char = '$';
 				else
 					tokens.putback(next_char);
 			}
+			subexpress_define(new_part);
 			// Any precedence less than 6 gets automatically pushed to the high_prec_stack by itself
 				// Subexpressions should not need to be built with precedence operators less than 6
 			if (Infix_Evaluator::precedence(next_char) < 6) {
@@ -118,6 +286,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
 					subexpress_define_reset();
 				}
+				subexpress_define(new_part);
 				// If previous subexpression was a full subexpression, push it first
 				if (LHS_RHS_OP1) {
 					high_prec_stack.push(new_part);
@@ -132,6 +301,19 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				new_part_alone = newer_part_alone;
 				last_op_prec = Infix_Evaluator::precedence(next_char);
 			}
+			// Nothing currently within (custom object) partExpression new_part (sub-expression) and precedence of 
+			// next_char is ==6 -> push to high_prec_stack by itself.
+
+			else if (NO_LHS_RHS_OP1_OP2 && (Infix_Evaluator::precedence(next_char) == 6)) {
+				new_part_alone.op1 = next_char;
+				high_prec_stack.push(new_part_alone);
+				partExpression newer_part_alone;
+				new_part_alone = newer_part_alone;
+				last_op_prec = Infix_Evaluator::precedence(next_char);
+				// Reset short-hand subexpression definitions all back to false (for next subexpress_define() call)
+				subexpress_define_reset();
+			}
+
 			// No operators currently within (custom object) partExpression new_part (sub-expression)
 			// Add in operator member variable op1 of new_part
 			else if ((new_part.op1 == ' ') && (new_part.op2 == ' ')) {
@@ -312,7 +494,7 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 				} */
 			}
 
-			// If the function reaches this point and all member variables of new_part are NULL, that means we are at a place where there is a sub-expression of *JUST* a number - push it to the high_prec_stack wrapped in new_part
+			// If the function reaches this point and all member variables of new_part are defaults, that means we are at a place where there is a sub-expression of *JUST* a number - push it to the high_prec_stack wrapped in new_part
 
 			else if ((isdigit(next_char)) && (NO_LHS_RHS_OP1_OP2)) {
 				new_part.lhs = next_char;
@@ -327,9 +509,12 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 		}
 	}
 	if (!(tokens >> next_char)) {
-		high_prec_stack.push(new_part);
-		partExpression newer_part;
-		new_part = newer_part;
+		if (solo_negation != true) {
+			high_prec_stack.push(new_part);
+			partExpression newer_part;
+			new_part = newer_part;
+		}
+		solo_negation = false;
 	}
 	else
 		tokens.putback(next_char);
@@ -384,16 +569,26 @@ std::string Infix_Evaluator::rebuild_expression() {
 		// Just a LHS number and 1 operator exist within the subexpression on top of the high_prec_eval stack
 		subexpress_define(current_sub_expression);
 		if (LHS_OP1) {
-			int result;
-			int lhs = current_sub_expression.lhs;
-			char op = current_sub_expression.op1;
-			result = Infix_Evaluator::eval_op(op, lhs);
-			rebuilt_expression << result;
-			new_string += rebuilt_expression.str();
-			new_string += " ";
-			rebuilt_expression.str("");
-			rebuilt_expression.clear();
+			if (current_sub_expression.op1 == '#') {
+				rebuilt_expression << current_sub_expression.lhs;
+				rebuilt_expression << "#";
+				new_string += rebuilt_expression.str();
+				new_string += " ";
+				rebuilt_expression.str("");
+				rebuilt_expression.clear();
 			}
+			else {
+				int result;
+				int lhs = current_sub_expression.lhs;
+				char op = current_sub_expression.op1;
+				result = Infix_Evaluator::eval_op(op, lhs);
+				rebuilt_expression << result;
+				new_string += rebuilt_expression.str();
+				new_string += " ";
+				rebuilt_expression.str("");
+				rebuilt_expression.clear();
+			}
+		}
 		subexpress_define_reset();
 
 		subexpress_define(current_sub_expression);
@@ -595,6 +790,19 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 	// While the operand stack is not empty
 	while (!operand_stack.empty()) {
+		// If the operand stack has only one thing in it and the operator stack has only one thing in it,
+		// it might be because it is a negation sign or a NOT operator -> eval and return together!
+		if ((operand_stack.size() == 1) && (operator_stack.size() == 1)) {
+			int lhs = operand_stack.top();
+			operand_stack.pop();
+
+			char op = operator_stack.top();
+			operator_stack.pop();
+
+			int result = eval_op(op, lhs);
+			operand_stack.push(result);
+		}
+
 		// If the operand stack is not empty AND the operator stack IS empty
 		// If the operand stack has only one thing in it, that's the answer -> return it!
 		if ((!operand_stack.empty()) && (operator_stack.empty())) {
@@ -647,37 +855,37 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 // Wrapper function to help readability of code - checks/set true flag for bool alias variables
 bool Infix_Evaluator::subexpress_define(partExpression subexpress) {
-	if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
+	if ((subexpress.lhs != def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (LHS_RHS_OP1_OP2 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
 		return (LHS_RHS_OP1 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
 		return (LHS_RHS_OP1 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
 		return (LHS_RHS = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs == NULL) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (LHS_OP1_OP2 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs == NULL) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
 		return (LHS_OP1 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs == NULL) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
 		return (LHS_OP2 = true);
-	else if ((subexpress.lhs != NULL) && (subexpress.rhs == NULL) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs != def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
 		return (LHS = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (RHS_OP1_OP2 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs != NULL) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
 		return (RHS_OP1 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
 		return (RHS_OP2 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs != NULL) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
 		return (RHS = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs == NULL) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (OP1_OP2 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs == NULL) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 == ' '))
 		return (OP1 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs == NULL) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 != ' '))
 		return (OP2 = true);
-	else if ((subexpress.lhs == NULL) && (subexpress.rhs == NULL) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
+	else if ((subexpress.lhs == def_zero) && (subexpress.rhs == def_zero) && (subexpress.op1 == ' ') && (subexpress.op2 == ' '))
 		return (NO_LHS_RHS_OP1_OP2 = true);
 	return false;
 }
@@ -731,11 +939,39 @@ int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
 			result = lhs;
 			break;
 		}
-		for (int i = 2; i <= rhs; i++) {
-			lhs *= lhs;
+		else {
+			result = lhs;
+			for (int i = rhs; i > 1; i--) {
+				result *= lhs;
+			}
+			break;
 		}
-		result = lhs;
-		break;
+	case '|':
+		if ((lhs == 0) && (rhs == 0))
+			result = 0;
+		else
+			result = 1;
+	case '&':
+		if ((lhs == 1) && (rhs == 1))
+			result = 1;
+	case '=':
+		if (lhs == rhs)
+			result = 1;
+	case '?':
+		if (lhs != rhs)
+			result = 1;
+	case '>':
+		if (lhs > rhs)
+			result = 1;
+	case '@':
+		if (lhs >= rhs)
+			result = 1;
+	case '<':
+		if (lhs < rhs)
+			result = 1;
+	case '`':
+		if (lhs <= rhs)
+			result = 1;
 	}
 	return result;
 }
@@ -759,6 +995,7 @@ int Infix_Evaluator::eval_op(char op, int rhs) {
 	}
 	return result;
 }
+
 
 // Wrapper function to incorporate all other necessary functions
 int Infix_Evaluator::eval(const std::string& expression) {
@@ -794,6 +1031,33 @@ int main() {
 
 	//Works = 7
 	//string expr = "1+2*3";
+
+	//Works = 1
+	//string expr = "2^0";
+
+	//Works = 1 (true)
+	//string expr = "1 <= 1";
+
+	// Works = 1 (true)
+	// string expr = "2 != 1";
+
+	// Works = 1 (true)
+	// string expr = "1 || 0";
+
+	// Works = 1 (true)
+	// string expr = "6 != 5";
+
+	// Works = -1
+	// string expr = "-1";
+
+	// Works = -25
+	// string expr = "-5 * 5";
+
+	// Works = 1
+	// string expr = "--2";
+
+	// ***NEEDS DEBUGGING***
+	// string expr = "6>5 && 4>5";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
