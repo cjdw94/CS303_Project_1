@@ -146,12 +146,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Infix_Parser.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.h" />
+    <ClInclude Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Syntax_Error.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Infix_Parser.h" />
-    <ClInclude Include="Syntax_Error.h" />
+    <ClCompile Include="..\..\Users\Corey\Desktop\CS303_Project_1\CS303_Project_1\Infix_Evaluator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
