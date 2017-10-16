@@ -41,6 +41,16 @@ public:
 	*/
 	void high_prec_eval(const std::string& expression);
 	std::string rebuild_expression();
+
+	std::string create_new_string(std::string new_string, std::ostringstream &rebuilt_expression)
+	{
+		new_string += rebuilt_expression.str();
+		new_string += " ";
+		rebuilt_expression.str("");
+		rebuilt_expression.clear();				
+		return new_string;
+	}
+
 	int equate(const std::string& expression);
 	int eval(const std::string& expression);
 
