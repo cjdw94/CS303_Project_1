@@ -884,8 +884,6 @@ int Infix_Evaluator::equate(const std::string& expression) {
 	// Sentinel for last encountered operator's value
 	int current_op_prec = 9, last_op_prec = 9, next_op_prec = 9, temp_int = 0, answer = 0;
 
-	bool end_of_stream = false;
-
 	// Ex. 1) For the number 10, the token stream reads in the char '1' -> continued in if-statement
 
 	// Ex. 2) For the operator '*', the token stream reads in char '*' - > continued in else-if statement
@@ -910,19 +908,24 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 			// Special handling for negative-sign-influenced digits
 			if (next_char == '#') {
-				tokens >> temp_char;
-				if (isdigit(temp_char)) {
-					tokens.putback(temp_char);
-					tokens >> temp_int;
-					temp_int = eval_op(next_char, temp_int);
-					operand_stack_1.push(temp_int);
-					temp_int = 0;
-				}
-				else if (is_operator(temp_char)) {
-					// Paren ?
-					operator_stack_1.push(temp_char);
+				if (tokens >> temp_char) {
+					if (is_operator(temp_char)) {
+						operator_stack_1.push(temp_char);
+					}
+					else if (isdigit(temp_char)) {
+						tokens.putback(temp_char);
+						tokens >> temp_int;
+						temp_int = eval_op(next_char, temp_int);
+						operand_stack_1.push(temp_int);
+						temp_int = 0;
+					}
 				}
 				temp_char = '0';
+				char op = next_char;
+				int lhs = operand_stack_1.top();
+				operand_stack_1.pop();
+				int result = eval_op(next_char, lhs);
+				operand_stack_1.push(result);
 				// Back to the top of the loop
 				continue;
 			}
@@ -993,6 +996,7 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 				else if ((current_op_prec == 6) && (next_op_prec < current_op_prec)) {
 					operator_stack_1.push(next_char);
+					operand_stack_1.push(temp_int);
 				}
 			}
 		}
@@ -1112,11 +1116,11 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 		else if (current_op_prec >= 2) {
 			// Store lhs in a temp variable
-			int lhs = operand_stack_1.top();
+			int rhs = operand_stack_1.top();
 			// Pop the lhs off the top of the first operand stack (operand_stack_1)
 			operand_stack_1.pop();
 			// Store rhs in a temp variable
-			int rhs = operand_stack_1.top();
+			int lhs = operand_stack_1.top();
 			// Pop the rhs off the top of the first operand stack (operand_stack_1)
 			operand_stack_1.pop();
 			// Send operator, rhs, and lhs to the eval function and return a result
@@ -1378,6 +1382,7 @@ int main() {
 	//Works = 14
 	//string expr = "2+2^2*3";
 
+	// Recent update broke, needs debugging
 	//Works = 6
 	//string expr = "10 - 2 * 5 + 6 * 2 / 2";
 
@@ -1393,9 +1398,8 @@ int main() {
 	//Works = 1
 	//string expr = "2^!8";
 
-	// ***Recent update broke, needs debugging ***
 	//Depending on interpretation of acceptable 'division', this works per C++ language -> 2 + 0 * 8 = 2
-	string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
+	//string expr = "1 * 2 + 2 ^ !8 / ++3 * 8";
 
 	//Works = 7
 	//string expr = "1+2*3";
@@ -1403,8 +1407,7 @@ int main() {
 	//Works = 8
 	//string expr = "2^3";
 
-	//Latest update broke - needs debugging
-	//Returns 0, should return 1
+	//Works = 1
 	//string expr = "5 <= 7";
 
 	// Works = 1 (true)
@@ -1420,7 +1423,6 @@ int main() {
 	// Works = -1
 	//string expr = "-1";
 
-	// Latest update broke - needs debugging
 	// Returns 25, should return -25
 	//string expr = "-5 * 5";
 
@@ -1430,8 +1432,8 @@ int main() {
 	// *** Currently returns '3' - needs debugging ***
 	//string expr = "----4";
 
-	// Returns 26, should return 50 - needs debugging
-	//string expr = "6*5 + 4*5";
+	// Recent update broke, needs debugging
+	string expr = "6*5 + 4*5";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
