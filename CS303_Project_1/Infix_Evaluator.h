@@ -73,8 +73,10 @@ private:
 	// Data fields
 	static const std::string OPERATORS;
 	static const int PRECEDENCE[];
-	std::stack<char> operator_stack;
-	std::stack<int> operand_stack;
+	std::stack<char> operator_stack_1;
+	std::stack<char> operator_stack_2;
+	std::stack<int> operand_stack_1;
+	std::stack<int> operand_stack_2;
 	std::stack<partExpression> high_prec_stack;
 	std::stack<partExpression> high_prec_stack_reversal;
 };
