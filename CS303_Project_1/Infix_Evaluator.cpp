@@ -990,6 +990,17 @@ int Infix_Evaluator::equate(const std::string& expression) {
 				}
 
 				else if ((current_op_prec < last_op_prec) && (next_op_prec > current_op_prec)) {
+					if (last_op_prec == 6) {
+						int result = 0;
+						int rhs = operand_stack_1.top();
+						operand_stack_1.pop();
+						int lhs = operand_stack_1.top();
+						operand_stack_1.pop();
+						char op = operator_stack_1.top();
+						operator_stack_1.pop();
+						result = eval_op(op, rhs, lhs);
+						operand_stack_1.push(result);
+					}
 					operator_stack_1.push(next_char);
 					operand_stack_1.push(temp_int);
 				}
@@ -998,9 +1009,21 @@ int Infix_Evaluator::equate(const std::string& expression) {
 					operator_stack_1.push(next_char);
 					operand_stack_1.push(temp_int);
 				}
+				else if ((current_op_prec > next_op_prec) && (last_op_prec == 9)) {
+					int result = 0;
+					int lhs = operand_stack_1.top();
+					operand_stack_1.pop();
+					char op = next_char;
+					int rhs = temp_int;
+					result = eval_op(op, rhs, lhs);
+					operand_stack_1.push(result);
+				}
 			}
 		}
 
+		if ((next_char == '|') && (last_op_prec != 9)) {
+			operand_stack_1.push(temp_int);
+		}
 		last_op_prec = current_op_prec;
 	}
 
@@ -1089,6 +1112,10 @@ int Infix_Evaluator::equate(const std::string& expression) {
 
 		// Need to determine if or how to evaluate sub expression
 
+		if (next_char == '|' && operator_stack_1.empty()) {
+			operator_stack_1.push(next_char);
+		}
+
 		// If there is only one thing left in the operand_stack_1 and all other stacks are empty, we're done
 			// Return the answer
 		if ((operand_stack_1.size() == 1) && (operator_stack_1.size() == 0) &&
@@ -1098,11 +1125,12 @@ int Infix_Evaluator::equate(const std::string& expression) {
 		}
 
 		// Store operator in a temp variable, set current_op_prec
-		temp_op = operator_stack_1.top();
-		operator_stack_1.pop();
-		current_op_prec = Infix_Evaluator::precedence(temp_op);
 		if (!operator_stack_1.empty()) {
-			next_op_prec = Infix_Evaluator::precedence(operator_stack_1.top());
+			temp_op = operator_stack_1.top();
+			operator_stack_1.pop();
+			current_op_prec = Infix_Evaluator::precedence(temp_op);
+			if (!operator_stack_1.empty())
+				next_op_prec = Infix_Evaluator::precedence(operator_stack_1.top());
 		}
 
 		// If the operator has a precedence of 1
@@ -1382,7 +1410,6 @@ int main() {
 	//Works = 14
 	//string expr = "2+2^2*3";
 
-	// Recent update broke, needs debugging
 	//Works = 6
 	//string expr = "10 - 2 * 5 + 6 * 2 / 2";
 
@@ -1408,32 +1435,31 @@ int main() {
 	//string expr = "2^3";
 
 	//Works = 1
-	//string expr = "5 <= 7";
+	//string expr = "5 >= 7 || 1";
 
 	// Works = 1 (true)
 	//string expr = "2 != 3";
 
 	// Works = 1 (true)
-	//string expr = "0 || 0";
+	//string expr = "1 || 0";
 
 	// Works = 1 (true)
 	//string expr = "6 != 5";
 
-	//Latest update broke - needs debugging
 	// Works = -1
-	//string expr = "-1";
+	// string expr = "-1";
 
 	// Returns 25, should return -25
-	//string expr = "-5 * 5";
+	// string expr = "-5 * 5";
 
 	// Works = 1
-	//string expr = "--2";
+	// string expr = "--2";
 
 	// *** Currently returns '3' - needs debugging ***
 	//string expr = "----4";
 
-	// Recent update broke, needs debugging
-	string expr = "6*5 + 4*5";
+	// Works = 50
+	// string expr = "6*5 + 4*5";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
