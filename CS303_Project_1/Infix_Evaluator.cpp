@@ -9,18 +9,22 @@ using std::string;
 using std::istringstream;
 using std::isdigit;
 
+// This will be used as a default int value for the partExpression struct objects
 int def_zero = -9999999;
+
 const string Infix_Evaluator::OPERATORS = "|&=?>@<`+-*/%^#~$!()[]{}";
 const int Infix_Evaluator::PRECEDENCE[] = { 1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 6, 7, 8, 8, 8, 8, -1, -1, -1, -1, -1, -1 };
+
+// Bool flags for evaluator logic
 bool LHS_RHS_OP1_OP2, LHS_RHS_OP1, LHS_RHS_OP2, LHS_RHS, LHS_OP1_OP2, LHS_OP1, LHS_OP2, LHS, RHS_OP1_OP2, 
 			RHS_OP1, RHS_OP2, RHS, OP1_OP2, OP1, OP2, NO_LHS_RHS_OP1_OP2;
 
-/** Systematically parses the full expression and handles the highest precedence (8) subexpressions first
+
+/** Systematically parses the full expression and handles the highest precedence (7 or 8) subexpressions first
 @param expression The expression to be evaluated
-@return The value of the subexpression (precedence 8)
+@return None (void function) -> builds new stack without high precedence evaluators left to evaluate
 @throws Syntax_Error if a syntax error is detected
 */
-
 void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 	// Be sure high_prec_stack is empty
 	while (!high_prec_stack.empty())
@@ -697,13 +701,11 @@ void Infix_Evaluator::high_prec_eval(const std::string& expression) {
 	subexpress_define_reset();
 }
 
-/** Evaluates an infix expression/subexpression from the high_prec_stack and 
-pushes to appropriate operator and operand stacks for final evaluation.
-@param expression The expression to be evaluated
-@return The value of the expression
+/** Rebuilds input expression string after first run-through high_prec_eval - with correct left-to-right ordering
+@param expression The expression to be evaluated (which was return 
+@return The value of the expression determined from the contents of the high precedence stack
 @throws Syntax_Error if a syntax error is detected
 */
-
 std::string Infix_Evaluator::rebuild_expression() {
 	std::string new_string;
 	partExpression current_sub_expression;
@@ -725,17 +727,11 @@ std::string Infix_Evaluator::rebuild_expression() {
 		if (LHS || OP1) {
 			if (LHS) {
 				rebuilt_expression << current_sub_expression.lhs;
-				new_string += rebuilt_expression.str();
-				new_string += " ";
-				rebuilt_expression.str("");
-				rebuilt_expression.clear();
+				new_string = create_new_string(new_string, rebuilt_expression);
 			}
 			else if (OP1) {
 				rebuilt_expression << current_sub_expression.op1;
-				new_string += rebuilt_expression.str();
-				new_string += " ";
-				rebuilt_expression.str("");
-				rebuilt_expression.clear();
+				new_string = create_new_string(new_string, rebuilt_expression);
 			}
 			subexpress_define_reset();
 		}
@@ -746,10 +742,7 @@ std::string Infix_Evaluator::rebuild_expression() {
 			if (current_sub_expression.op1 == '#') {
 				rebuilt_expression << current_sub_expression.lhs;
 				rebuilt_expression << "#";
-				new_string += rebuilt_expression.str();
-				new_string += " ";
-				rebuilt_expression.str("");
-				rebuilt_expression.clear();
+				new_string = create_new_string(new_string, rebuilt_expression);
 			}
 			else {
 				int result;
@@ -757,14 +750,12 @@ std::string Infix_Evaluator::rebuild_expression() {
 				char op = current_sub_expression.op1;
 				result = Infix_Evaluator::eval_op(op, lhs);
 				rebuilt_expression << result;
-				new_string += rebuilt_expression.str();
-				new_string += " ";
-				rebuilt_expression.str("");
-				rebuilt_expression.clear();
+				new_string = create_new_string(new_string, rebuilt_expression);
 			}
 		}
 		subexpress_define_reset();
 
+		// Just a LHS number, RHS number, and 1 operator exist within the subexpression on top of the high_prec_stack
 		subexpress_define(current_sub_expression);
 		if (LHS_RHS_OP1) {
 			int result;
@@ -773,17 +764,20 @@ std::string Infix_Evaluator::rebuild_expression() {
 			char op = current_sub_expression.op1;
 			result = Infix_Evaluator::eval_op(op, rhs, lhs);
 			rebuilt_expression << result;
-			new_string += rebuilt_expression.str();
-			new_string += " ";
-			rebuilt_expression.str("");
-			rebuilt_expression.clear();
+			new_string = create_new_string(new_string, rebuilt_expression);
 		}
 		subexpress_define_reset();
 
+		// Just a LHS number and 2 operators exist within the subexpression on top of the high_prec_stack
+		// - LHS number will be treated as a RHS number  (?)
 		subexpress_define(current_sub_expression);
 		if (LHS_OP1_OP2) {
 			int result, lhs;
 			char op;
+
+			// *******************************************************
+			// Logic for handling chained level 8 precedence operators
+			//********************************************************
 			if (current_sub_expression.prec_8_tally == 1) {
 				int lhs = current_sub_expression.rhs;
 				char op = current_sub_expression.op2;
@@ -802,14 +796,11 @@ std::string Infix_Evaluator::rebuild_expression() {
 			op = current_sub_expression.op1;
 			result = Infix_Evaluator::eval_op(op, lhs);
 			rebuilt_expression << result;
-			new_string += rebuilt_expression.str();
-			new_string += " ";
-			rebuilt_expression.str("");
-			rebuilt_expression.clear();
+			new_string = create_new_string(new_string, rebuilt_expression);
 		}
-
 		subexpress_define_reset();
 
+		// All 4 (standard) member variables of partExpression struct are being used 
 		subexpress_define(current_sub_expression);
 		if (LHS_RHS_OP1_OP2) {
 			int result, lhs, rhs;
@@ -838,28 +829,37 @@ std::string Infix_Evaluator::rebuild_expression() {
 				op = current_sub_expression.op1;
 				result = Infix_Evaluator::eval_op(op, rhs, lhs);
 				rebuilt_expression << result;
-				new_string += rebuilt_expression.str();
-				new_string += " ";
-				rebuilt_expression.str("");
-				rebuilt_expression.clear();
+				new_string = create_new_string(new_string, rebuilt_expression);
 			}
 		}
-
 		subexpress_define_reset();
 
 		subexpress_define(current_sub_expression);
+		// None of the 4 (standard) member variables of partExpression struct are being used
 		if ((NO_LHS_RHS_OP1_OP2) && (new_string != ""))
 			return new_string;
-		
 		subexpress_define_reset();
 	}
 
 	return new_string;
 }
 
-/** Evaluates an infix expression.
+/** Concatenates subexpressions parsed by the rebuild_expression() function
+@param new_string A subexpression built within rebuild_expression
+@return The updated new_string built within rebuild_expression
+@throws Syntax_Error if a syntax error is detected
+*/
+std::string Infix_Evaluator::create_new_string(std::string new_string, std::ostringstream &rebuilt_expression) {
+	new_string += rebuilt_expression.str();
+	new_string += " ";
+	rebuilt_expression.str("");
+	rebuilt_expression.clear();
+	return new_string;
+}
+
+/** Final function to finish evaluation of an infix expression.
 @param expression The expression to be evaluated
-@return The value of the expression
+@return The int value of the expression
 @throws Syntax_Error if a syntax error is detected
 */
 int Infix_Evaluator::equate(const std::string& expression) {
@@ -883,10 +883,6 @@ int Infix_Evaluator::equate(const std::string& expression) {
 	char temp_char = '0', temp_op = '0', double_char_op = '0';
 	// Sentinel for last encountered operator's value
 	int current_op_prec = 9, last_op_prec = 9, next_op_prec = 9, temp_int = 0, answer = 0;
-
-	// Ex. 1) For the number 10, the token stream reads in the char '1' -> continued in if-statement
-
-	// Ex. 2) For the operator '*', the token stream reads in char '*' - > continued in else-if statement
 
 	// Process each token
 	while (tokens >> next_char) {
@@ -979,6 +975,8 @@ int Infix_Evaluator::equate(const std::string& expression) {
 			// Need to determine if or how to evaluate sub expression
 			else {
 
+				// Ex.) Current operator precedence is either the same or greater than the preceding and following operators
+				//		within the expression
 				if ((current_op_prec >= last_op_prec) && (current_op_prec >= next_op_prec)) {
 					int result = 0;
 					int lhs = operand_stack_1.top();
@@ -988,7 +986,8 @@ int Infix_Evaluator::equate(const std::string& expression) {
 					result = eval_op(op, rhs, lhs);
 					operand_stack_1.push(result);
 				}
-
+				// Ex.) Current operator precedence is less than both the preceding and following operators within the
+				//		expression
 				else if ((current_op_prec < last_op_prec) && (next_op_prec > current_op_prec)) {
 					if (last_op_prec == 6) {
 						int result = 0;
@@ -1009,6 +1008,7 @@ int Infix_Evaluator::equate(const std::string& expression) {
 					operator_stack_1.push(next_char);
 					operand_stack_1.push(temp_int);
 				}
+
 				else if ((current_op_prec > next_op_prec) && (last_op_prec == 9)) {
 					int result = 0;
 					int lhs = operand_stack_1.top();
@@ -1021,6 +1021,7 @@ int Infix_Evaluator::equate(const std::string& expression) {
 			}
 		}
 
+		// Logic to help handle an expression that is not just two ints with an "||" operator separating them
 		if ((next_char == '|') && (last_op_prec != 9)) {
 			operand_stack_1.push(temp_int);
 		}
@@ -1117,7 +1118,7 @@ int Infix_Evaluator::equate(const std::string& expression) {
 		}
 
 		// If there is only one thing left in the operand_stack_1 and all other stacks are empty, we're done
-			// Return the answer
+		// Return the answer
 		if ((operand_stack_1.size() == 1) && (operator_stack_1.size() == 0) &&
 			(operand_stack_2.size() == 0) && (operator_stack_2.size() == 0)) {
 			answer = operand_stack_1.top();
@@ -1139,8 +1140,8 @@ int Infix_Evaluator::equate(const std::string& expression) {
 			operator_stack_2.push(temp_op);
 
 		// If operator has a greater than or equal to precedence of 2 (meaning && == != and comparison operators),
-			// And if current operator is greater than or equal to next_op_prec
-				// => let's evaluate the sub-expression
+		// And if current operator is greater than or equal to next_op_prec
+		// => let's evaluate the sub-expression
 
 		else if (current_op_prec >= 2) {
 			// Store lhs in a temp variable
@@ -1204,7 +1205,7 @@ int Infix_Evaluator::equate(const std::string& expression) {
 		// Still stuff left to evaluate -> let's do it
 		else if ((!operand_stack_2.empty()) && (!operator_stack_2.empty())) {
 			// The operand stack is not empty, and there's more than 1 item in it - and the operator stack is not yet empty - time to evaluate the rest of the expression
-			if ((operand_stack_2.size() > 1) && (operator_stack_2.size() > 0)) {
+			if ((operand_stack_2.size() > 1) && (!operator_stack_2.empty())) {
 				int rhs = operand_stack_2.top();
 				operand_stack_2.pop();
 
@@ -1241,7 +1242,10 @@ int Infix_Evaluator::equate(const std::string& expression) {
 	}
 }
 
-// Wrapper function to help readability of code - checks/set true flag for bool alias variables
+/** Wrapper function to help readability of code - checks/set true flag for bool alias variables
+@param subexpress Subexpression of type partExpression (custom struct)
+@return Returns true for specific variable 
+*/
 bool Infix_Evaluator::subexpress_define(partExpression subexpress) {
 	if ((subexpress.lhs != def_zero) && (subexpress.rhs != def_zero) && (subexpress.op1 != ' ') && (subexpress.op2 != ' '))
 		return (LHS_RHS_OP1_OP2 = true);
@@ -1278,7 +1282,9 @@ bool Infix_Evaluator::subexpress_define(partExpression subexpress) {
 	return false;
 }
 
-// When called, resets all true flags assigned by subexpress_define back to false
+/** Resets all true flags assigned by subexpress_define back to false
+@return Returns false for all subexpress bool variables
+*/
 bool Infix_Evaluator::subexpress_define_reset() {
 	return(LHS_RHS_OP1_OP2 = false,
 		LHS_RHS_OP1 = false,
@@ -1302,6 +1308,8 @@ bool Infix_Evaluator::subexpress_define_reset() {
 This function pops the two operands off the expression
 stack and applies the operator.
 @param op A character representing the operator
+@param rhs An integer representing the right hand side of the operation
+@param lhs An integer representing the left hand side of the operation
 @throws Syntax_Error if top is attempted on an empty stack
 */
 int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
@@ -1372,7 +1380,11 @@ int Infix_Evaluator::eval_op(char op, int rhs, int lhs) {
 	return result;
 }
 
-// Overloaded to deal with prefix operators
+/** Evaluates the current operator -  overloaded to deal with prefix operators
+@param op A character representing the operator
+@param rhs An integer representing the value attached to the prefix operator
+@throws Syntax_Error if top is attempted on an empty stack
+*/
 int Infix_Evaluator::eval_op(char op, int rhs) {
 	int result = 0;
 	switch (op) {
@@ -1392,8 +1404,10 @@ int Infix_Evaluator::eval_op(char op, int rhs) {
 	return result;
 }
 
-
-// Wrapper function to incorporate all other necessary functions
+/** Wrapper function to incorporate all other necessary functions
+@param The original string expression to be evaluated
+@return The final value of all operations performed in order by precedence
+*/
 int Infix_Evaluator::eval(const std::string& expression) {
 	Infix_Evaluator::high_prec_eval(expression);
 	std::string new_expression = Infix_Evaluator::rebuild_expression();
@@ -1447,19 +1461,19 @@ int main() {
 	//string expr = "6 != 5";
 
 	// Works = -1
-	// string expr = "-1";
+	//string expr = "-1";
 
-	// Returns 25, should return -25
-	// string expr = "-5 * 5";
+	// Works = -25
+	//string expr = "-5 * 5";
 
 	// Works = 1
-	// string expr = "--2";
+	//string expr = "--2";
 
 	// *** Currently returns '3' - needs debugging ***
 	//string expr = "----4";
 
 	// Works = 50
-	// string expr = "6*5 + 4*5";
+	//string expr = "6*5 + 4*5";
 
 	std::cout << "Current infix string to be evaluated is '" << expr << "'\n\n";
 
