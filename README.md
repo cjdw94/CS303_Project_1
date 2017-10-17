@@ -5,6 +5,10 @@ Project due on Monday, October 16, 2017.  (Development time extended by 24 hours
 
 /** Project due on Sunday, October 15th, 2017 */
 
+10/16/17 - Lots of bug fixes and code clean-up done prior to the turn-in date/time.  Due to time constraints and other challenges, parens and chained prefix operators are still non-functional.
+
+10/15/17 - Implemented extra stacks to help handle more complicated logic for precedence levels 1-4.  Lots of debugging required to tie into current project.
+
 10/14/17 - Support added for precedence levels 1-4.  Chaining expressions with logical and comparison operations needs fixing/testing.
          - Parentheses logic still needs to be worked on
 
