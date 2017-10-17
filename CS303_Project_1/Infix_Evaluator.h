@@ -34,29 +34,33 @@ struct partExpression {
 class Infix_Evaluator {
 	// Public member functions
 public:
-	/** Parses an infix expression.
-	@param expression The expression to be evaluated
-	@return The value of the expression
-	@throws Syntax_Error if a syntax error is detected
-	*/
+	//Systematically parses the full expression and handles the highest precedence (7 or 8) subexpressions first
 	void high_prec_eval(const std::string& expression);
-	std::string rebuild_expression();
-	int equate(const std::string& expression);
-	int eval(const std::string& expression);
 
-	// Private member functions
-private:
-	/** Evaluates the current operator.
-	This function pops the two operands off the expression
-	stack and applies the operator.
-	@param op A character representing the operator
-	@throws Syntax_Error if top is attempted on an empty stack
-	*/
-	int eval_op(char op, int rhs, int lhs);
-	int eval_op(char op, int rhs);
+	//Rebuilds input expression string after first run - through high_prec_eval - with correct left - to - right ordering
+	std::string rebuild_expression();
+
+	//Concatenates subexpressions parsed by the rebuild_expression() function
+	std::string create_new_string(std::string new_string, std::ostringstream &rebuilt_expression);
+
+	//Final function to finish evaluation of an infix expression.
+	int equate(const std::string& expression);
+
+	//Wrapper function to help readability of code - checks/set true flag for bool alias variables
 	bool subexpress_define(partExpression subexpress);
+
+	//Resets all true flags assigned by subexpress_define back to false
 	bool subexpress_define_reset();
 
+	//Evaluates the current operator.  
+	int eval_op(char op, int rhs, int lhs);
+
+	//Evaluates the current operator -  overloaded to deal with prefix operators
+	int eval_op(char op, int rhs);
+
+	//Wrapper function to help readability of code - checks/set true flag for bool alias variables
+	int eval(const std::string& expression);
+	
 
 	/** Determines whether a character is an operator.
 	@param ch The character to be tested
@@ -66,6 +70,10 @@ private:
 		return OPERATORS.find(ch) != std::string::npos;
 	}
 
+	/** Determines what precedence is associated with a specific operator
+	@param op The operator character to be checked
+	@return The integer value of the precedence of the operator
+	*/
 	int precedence(char op) const {
 		return PRECEDENCE[OPERATORS.find(op)];
 	}
@@ -73,8 +81,10 @@ private:
 	// Data fields
 	static const std::string OPERATORS;
 	static const int PRECEDENCE[];
-	std::stack<char> operator_stack;
-	std::stack<int> operand_stack;
+	std::stack<char> operator_stack_1;
+	std::stack<char> operator_stack_2;
+	std::stack<int> operand_stack_1;
+	std::stack<int> operand_stack_2;
 	std::stack<partExpression> high_prec_stack;
 	std::stack<partExpression> high_prec_stack_reversal;
 };
